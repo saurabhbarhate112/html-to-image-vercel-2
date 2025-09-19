@@ -1,5 +1,5 @@
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -26,25 +26,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'HTML content is required' });
     }
 
-    // Launch Puppeteer with Chromium for Vercel
-    browser = await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        '--hide-scrollbars',
-        '--disable-web-security',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ],
+    // Configure Chromium for Vercel
+    const options = {
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
-    });
+      ignoreHTTPSErrors: true,
+    };
 
+    // Launch Puppeteer with Chromium
+    browser = await puppeteer.launch(options);
     const page = await browser.newPage();
 
     // Set viewport
