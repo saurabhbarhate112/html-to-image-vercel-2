@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "HTML to Image converter using Puppeteer",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node api/convert.js"
   },
@@ -11,6 +12,6 @@
     "@sparticuz/chromium": "^119.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   }
 }
