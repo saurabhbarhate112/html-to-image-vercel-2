@@ -1,4 +1,5 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -16,6 +17,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
+  let browser = null;
+
   try {
     const { html, width = 1200, height = 800, format = 'png' } = req.body;
 
@@ -23,10 +26,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'HTML content is required' });
     }
 
-    // Launch Puppeteer with optimized settings for Vercel
-    const browser = await puppeteer.launch({
-      headless: 'new',
+    // Launch Puppeteer with Chromium for Vercel
+    browser = await puppeteer.launch({
       args: [
+        ...chromium.args,
+        '--hide-scrollbars',
+        '--disable-web-security',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -34,7 +39,10 @@ export default async function handler(req, res) {
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu'
-      ]
+      ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
@@ -48,7 +56,8 @@ export default async function handler(req, res) {
 
     // Set content and wait for it to load
     await page.setContent(html, {
-      waitUntil: ['networkidle0', 'domcontentloaded']
+      waitUntil: ['networkidle0', 'domcontentloaded'],
+      timeout: 30000
     });
 
     // Take screenshot
@@ -59,6 +68,7 @@ export default async function handler(req, res) {
     });
 
     await browser.close();
+    browser = null;
 
     // Return base64 image
     res.status(200).json({
@@ -70,6 +80,16 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error:', error);
+    
+    // Make sure browser is closed even if there's an error
+    if (browser !== null) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('Error closing browser:', closeError);
+      }
+    }
+
     res.status(500).json({
       success: false,
       error: 'Failed to generate image',
